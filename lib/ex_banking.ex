@@ -6,6 +6,20 @@ defmodule ExBanking do
          do: :ok
   end
 
+  @spec deposit(user :: String.t(), amount :: number, currency :: String.t()) ::
+          {:ok, new_balance :: number}
+          | {:error, :wrong_arguments | :user_does_not_exist | :too_many_requests_to_user}
+  def deposit(user, amount, currency) do
+    with :ok <- valid_string_input(currency),
+         :ok <- valid_number_input(amount),
+         :ok <- deposit_money(user, currency, amount),
+         do: {:ok, fetch_currency_balance(user, currency)}
+  end
+
+  defp valid_number_input(param) do
+    if is_number(param) and param > 0, do: :ok, else: {:error, :wrong_arguments}
+  end
+
   defp valid_string_input(param) do
     if is_binary(param), do: :ok, else: {:error, :wrong_arguments}
   end
@@ -13,6 +27,18 @@ defmodule ExBanking do
   defp insert_new_user(user) do
     with {:error, :already_exists} <- ConCache.insert_new(:bank, user, %{}),
          do: {:error, :user_already_exists}
+  end
+
+  defp deposit_money(user, currency, amount) do
+    with {:error, :not_existing} <-
+           ConCache.update_existing(:bank, user, fn currency_map ->
+             {:ok, Map.update(currency_map, currency, amount, fn balance -> balance + amount end)}
+           end),
+         do: {:error, :user_does_not_exist}
+  end
+
+  defp fetch_currency_balance(user, currency) do
+    Map.get(ConCache.get(:bank, user), currency)
   end
 
   def start_link do
