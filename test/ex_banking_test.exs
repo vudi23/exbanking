@@ -62,4 +62,42 @@ defmodule ExBankingTest do
       assert deposit("user", 0, "usd") == {:error, :wrong_arguments}
     end
   end
+
+  describe "withdraw" do
+    test "can withdraw currency if existing in adequate amount" do
+      create_user("user")
+      deposit("user", 100, "usd")
+      assert withdraw("user", 40, "usd") == {:ok, 60}
+      assert withdraw("user", 25, "usd") == {:ok, 35}
+    end
+
+    test "can't withdraw currency if not existing in adequate amount" do
+      create_user("user")
+      deposit("user", 100, "usd")
+      assert withdraw("user", 575, "usd") == {:error, :not_enough_money}
+    end
+
+    test "can't withdraw currency if currency not existing" do
+      create_user("user")
+      deposit("user", 100, "usd")
+      assert withdraw("user", 75, "eur") == {:error, :not_enough_money}
+    end
+
+    test "can't withdraw if user doesn't exist" do
+      assert withdraw("non_existing_user", 50, "usd") == {:error, :user_does_not_exist}
+    end
+
+    test "can't withdraw if arguments wrong" do
+      create_user("user")
+      deposit("user", 100, "usd")
+      assert withdraw("user", 75, 75) == {:error, :wrong_arguments}
+      assert withdraw("user", "usd", "usd") == {:error, :wrong_arguments}
+    end
+
+    test "can withdraw nothing" do
+      create_user("user")
+      deposit("user", 100, "usd")
+      assert withdraw("user", 0, "usd") == {:error, :wrong_arguments}
+    end
+  end
 end
