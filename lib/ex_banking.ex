@@ -125,7 +125,8 @@ defmodule ExBanking do
   def start_link do
     Supervisor.start_link(
       [
-        {ConCache, [name: :bank, ttl_check_interval: false]}
+        con_cache_child_spec(:bank),
+        con_cache_child_spec(:rate_limiter)
       ],
       strategy: :one_for_one,
       name: __MODULE__
@@ -138,5 +139,18 @@ defmodule ExBanking do
       type: :supervisor,
       start: {__MODULE__, :start_link, []}
     }
+  end
+
+  defp con_cache_child_spec(name) do
+    Supervisor.child_spec(
+      {
+        ConCache,
+        [
+          name: name,
+          ttl_check_interval: false
+        ]
+      },
+      id: {ConCache, name}
+    )
   end
 end
