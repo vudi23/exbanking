@@ -16,6 +16,20 @@ defmodule ExBanking do
          do: {:ok, fetch_currency_balance(user, currency)}
   end
 
+  @spec withdraw(user :: String.t(), amount :: number, currency :: String.t()) ::
+          {:ok, new_balance :: number}
+          | {:error,
+             :wrong_arguments
+             | :user_does_not_exist
+             | :not_enough_money
+             | :too_many_requests_to_user}
+  def withdraw(user, amount, currency) do
+    with :ok <- valid_string_input(currency),
+         {:ok, amount} <- normalize_number_input(amount),
+         :ok <- withdraw_money(user, currency, amount),
+         do: {:ok, fetch_currency_balance(user, currency)}
+  end
+
   defp normalize_number_input(param) when is_float(param) and param > 0,
     do: {:ok, Float.floor(param, 2)}
 
@@ -37,6 +51,19 @@ defmodule ExBanking do
     with {:error, :not_existing} <-
            ConCache.update_existing(:bank, user, fn currency_map ->
              {:ok, Map.update(currency_map, currency, amount, fn balance -> balance + amount end)}
+           end),
+         do: {:error, :user_does_not_exist}
+  end
+
+  defp withdraw_money(user, currency, amount) do
+    with {:error, :not_existing} <-
+           ConCache.update_existing(:bank, user, fn currency_map ->
+             updated_map =
+               Map.update(currency_map, currency, 0, fn balance -> balance - amount end)
+
+             if Map.get(updated_map, currency) >= 0 and Map.has_key?(currency_map, currency),
+               do: {:ok, updated_map},
+               else: {:error, :not_enough_money}
            end),
          do: {:error, :user_does_not_exist}
   end
