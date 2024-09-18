@@ -30,6 +30,19 @@ defmodule ExBanking do
          do: {:ok, fetch_currency_balance(user, currency)}
   end
 
+  @spec get_balance(user :: String.t(), currency :: String.t()) ::
+          {:ok, balance :: number}
+          | {:error, :wrong_arguments | :user_does_not_exist | :too_many_requests_to_user}
+  def get_balance(user, currency) do
+    with :ok <- valid_string_input(currency),
+         portfolio = ConCache.get(:bank, user) do
+      case portfolio do
+        nil -> {:error, :user_does_not_exist}
+        _ -> {:ok, Map.get(portfolio, currency, 0)}
+      end
+    end
+  end
+
   defp normalize_number_input(param) when is_float(param) and param > 0,
     do: {:ok, Decimal.from_float(param) |> Decimal.round(2, :down) |> Decimal.to_float()}
 
