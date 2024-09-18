@@ -169,4 +169,57 @@ defmodule ExBankingTest do
       assert get_balance("user", "usd") == {:ok, 100}
     end
   end
+
+  describe "rate limiting" do
+    test "depositing runs into limit" do
+      create_user("user")
+
+      assert Enum.map(1..20, fn _ -> Task.async(fn -> deposit("user", 10, "usd") end) end)
+             |> Task.await_many()
+             |> Enum.member?({:error, :too_many_requests_to_user}) == true
+    end
+
+    test "withdrawing runs into limit" do
+      create_user("user")
+      deposit("user", 200, "usd")
+
+      assert Enum.map(1..20, fn _ -> Task.async(fn -> withdraw("user", 10, "usd") end) end)
+             |> Task.await_many()
+             |> Enum.member?({:error, :too_many_requests_to_user}) == true
+    end
+
+    test "get balance runs into limit" do
+      create_user("user")
+      deposit("user", 100, "usd")
+
+      assert Enum.map(1..20, fn _ -> Task.async(fn -> get_balance("user", "usd") end) end)
+             |> Task.await_many()
+             |> Enum.member?({:error, :too_many_requests_to_user}) == true
+    end
+
+    test "sending money runs into limit" do
+      create_user("sender")
+      create_user("receiver")
+      deposit("sender", 200, "usd")
+
+      assert Enum.map(1..20, fn _ ->
+               Task.async(fn -> send("sender", "receiver", 10, "usd") end)
+             end)
+             |> Task.await_many()
+             |> Enum.member?({:error, :too_many_requests_to_sender}) == true
+    end
+
+    test "receiving money runs into limit" do
+      create_user("sender")
+      deposit("sender", 200, "usd")
+      create_user("receiver")
+
+      assert (Enum.map(1..10, fn _ -> Task.async(fn -> get_balance("receiver", "usd") end) end) ++
+                Enum.map(1..10, fn _ ->
+                  Task.async(fn -> send("sender", "receiver", 10, "usd") end)
+                end))
+             |> Task.await_many()
+             |> Enum.member?({:error, :too_many_requests_to_receiver}) == true
+    end
+  end
 end
