@@ -3,6 +3,7 @@ defmodule ExBanking do
   def create_user(user) do
     with :ok <- valid_string_input(user),
          :ok <- insert_new_user(user),
+         :ok <- user_request_limiter(user),
          do: :ok
   end
 
@@ -66,14 +67,10 @@ defmodule ExBanking do
          do: {:ok, new_balance_sender, new_balance_receiver}
   end
 
-  defp check_sender_funds(user, currency) do
-    with {:error, :user_does_not_exist} <- get_balance(user, currency),
-         do: {:error, :sender_does_not_exist}
+  defp user_request_limiter(user) do
+    ConCache.insert_new(:rate_limiter, user, 0)
   end
 
-  defp check_reciever_funds(user, currency) do
-    with {:error, :user_does_not_exist} <- get_balance(user, currency),
-         do: {:error, :receiver_does_not_exist}
   end
 
   defp check_enough_money_to_transfer(current_amount, desired_amount) do
