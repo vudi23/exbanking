@@ -67,8 +67,14 @@ defmodule ExBanking do
   def send(from_user, to_user, amount, currency) do
     with :ok <- increment_limiter(from_user, "sender"),
          :ok <- increment_limiter(to_user, "receiver"),
+         :ok <- check_enough_money_to_transfer(from_user, amount, currency),
+         :ok <- withdraw_money(from_user, currency, amount),
+         :ok <- deposit_money(to_user, currency, amount),
          :ok <- decrement_limiter(from_user),
          :ok <- decrement_limiter(to_user),
+         do:
+           {:ok, fetch_currency_balance(from_user, currency),
+            fetch_currency_balance(to_user, currency)}
   end
 
   defp user_request_limiter(user) do
@@ -92,6 +98,11 @@ defmodule ExBanking do
            end),
          do: {:error, :user_does_not_exist}
   end
+
+  defp check_enough_money_to_transfer(user, amount, currency) do
+    if amount <= fetch_currency_balance(user, currency),
+      do: :ok,
+      else: {:error, :not_enough_money}
   end
 
   defp normalize_number_input(param) when is_float(param) and param > 0,
