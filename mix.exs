@@ -1,9 +1,9 @@
-defmodule Exbanking.MixProject do
+defmodule ExBanking.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :exbanking,
+      app: :ex_banking,
       version: "0.1.0",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,

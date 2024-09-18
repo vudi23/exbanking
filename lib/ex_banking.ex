@@ -1,6 +1,6 @@
-defmodule Exbanking do
+defmodule ExBanking do
   @moduledoc """
-  Documentation for `Exbanking`.
+  Documentation for `ExBanking`.
   """
 
   @doc """
@@ -8,7 +8,7 @@ defmodule Exbanking do
 
   ## Examples
 
-      iex> Exbanking.hello()
+      iex> ExBanking.hello()
       :world
 
   """
