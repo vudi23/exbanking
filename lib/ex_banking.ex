@@ -71,10 +71,10 @@ defmodule ExBanking do
          :ok <- withdraw_money(from_user, currency, amount),
          :ok <- deposit_money(to_user, currency, amount),
          :ok <- decrement_limiter(from_user),
-         :ok <- decrement_limiter(to_user),
-         do:
-           {:ok, fetch_currency_balance(from_user, currency),
-            fetch_currency_balance(to_user, currency)}
+         :ok <- decrement_limiter(to_user) do
+      {:ok, fetch_currency_balance(from_user, currency),
+       fetch_currency_balance(to_user, currency)}
+    end
   end
 
   defp user_request_limiter(user) do
