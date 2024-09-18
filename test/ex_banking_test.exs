@@ -100,4 +100,28 @@ defmodule ExBankingTest do
       assert withdraw("user", 0, "usd") == {:error, :wrong_arguments}
     end
   end
+
+  describe "get_balance" do
+    test "created user can check balance" do
+      create_user("user")
+      deposit("user", 100.47, "usd")
+      assert get_balance("user", "usd") == {:ok, 100.47}
+    end
+
+    test "nonexisting user can't check balance" do
+      assert get_balance("non_existing_user", "usd") == {:error, :user_does_not_exist}
+    end
+
+    test "returns error for wrong arguments" do
+      create_user("user")
+      deposit("user", 100.47, "usd")
+      assert get_balance("user", 125) == {:error, :wrong_arguments}
+    end
+
+    test "returns zero for currencies not in portfolio" do
+      create_user("user")
+      deposit("user", 100.47, "usd")
+      assert get_balance("user", "eur") == {:ok, 0}
+    end
+  end
 end
