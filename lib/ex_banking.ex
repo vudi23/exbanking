@@ -43,6 +43,43 @@ defmodule ExBanking do
     end
   end
 
+  @spec send(
+          from_user :: String.t(),
+          to_user :: String.t(),
+          amount :: number,
+          currency :: String.t()
+        ) ::
+          {:ok, from_user_balance :: number, to_user_balance :: number}
+          | {:error,
+             :wrong_arguments
+             | :not_enough_money
+             | :sender_does_not_exist
+             | :receiver_does_not_exist
+             | :too_many_requests_to_sender
+             | :too_many_requests_to_receiver}
+  def send(from_user, to_user, amount, currency) do
+    with {:ok, old_balance_sender} <- check_sender_funds(from_user, currency),
+         {:ok, _old_balance_reciever} <- check_reciever_funds(to_user, currency),
+         :ok <- check_enough_money_to_transfer(old_balance_sender, amount),
+         {:ok, new_balance_sender} <- withdraw(from_user, amount, currency),
+         {:ok, new_balance_receiver} <- deposit(to_user, amount, currency),
+         do: {:ok, new_balance_sender, new_balance_receiver}
+  end
+
+  defp check_sender_funds(user, currency) do
+    with {:error, :user_does_not_exist} <- get_balance(user, currency),
+         do: {:error, :sender_does_not_exist}
+  end
+
+  defp check_reciever_funds(user, currency) do
+    with {:error, :user_does_not_exist} <- get_balance(user, currency),
+         do: {:error, :receiver_does_not_exist}
+  end
+
+  defp check_enough_money_to_transfer(current_amount, desired_amount) do
+    if desired_amount <= current_amount, do: :ok, else: {:error, :not_enough_money}
+  end
+
   defp normalize_number_input(param) when is_float(param) and param > 0,
     do: {:ok, Decimal.from_float(param) |> Decimal.round(2, :down) |> Decimal.to_float()}
 
