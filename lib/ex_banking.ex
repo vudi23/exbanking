@@ -13,7 +13,9 @@ defmodule ExBanking do
   def deposit(user, amount, currency) do
     with :ok <- valid_string_input(currency),
          {:ok, amount} <- normalize_number_input(amount),
+         :ok <- increment_limiter(user),
          :ok <- deposit_money(user, currency, amount),
+         :ok <- decrement_limiter(user),
          do: {:ok, fetch_currency_balance(user, currency)}
   end
 
@@ -27,7 +29,9 @@ defmodule ExBanking do
   def withdraw(user, amount, currency) do
     with :ok <- valid_string_input(currency),
          {:ok, amount} <- normalize_number_input(amount),
+         :ok <- increment_limiter(user),
          :ok <- withdraw_money(user, currency, amount),
+         :ok <- decrement_limiter(user),
          do: {:ok, fetch_currency_balance(user, currency)}
   end
 
@@ -36,7 +40,9 @@ defmodule ExBanking do
           | {:error, :wrong_arguments | :user_does_not_exist | :too_many_requests_to_user}
   def get_balance(user, currency) do
     with :ok <- valid_string_input(currency),
-         portfolio = ConCache.get(:bank, user) do
+         :ok <- increment_limiter(user),
+         portfolio = ConCache.get(:bank, user),
+         :ok <- decrement_limiter(user) do
       case portfolio do
         nil -> {:error, :user_does_not_exist}
         _ -> {:ok, Map.get(portfolio, currency, 0)}
@@ -59,22 +65,33 @@ defmodule ExBanking do
              | :too_many_requests_to_sender
              | :too_many_requests_to_receiver}
   def send(from_user, to_user, amount, currency) do
-    with {:ok, old_balance_sender} <- check_sender_funds(from_user, currency),
-         {:ok, _old_balance_reciever} <- check_reciever_funds(to_user, currency),
-         :ok <- check_enough_money_to_transfer(old_balance_sender, amount),
-         {:ok, new_balance_sender} <- withdraw(from_user, amount, currency),
-         {:ok, new_balance_receiver} <- deposit(to_user, amount, currency),
-         do: {:ok, new_balance_sender, new_balance_receiver}
+    with :ok <- increment_limiter(from_user, "sender"),
+         :ok <- increment_limiter(to_user, "receiver"),
+         :ok <- decrement_limiter(from_user),
+         :ok <- decrement_limiter(to_user),
   end
 
   defp user_request_limiter(user) do
     ConCache.insert_new(:rate_limiter, user, 0)
   end
 
+  defp increment_limiter(user, role \\ "user") do
+    with {:error, :not_existing} <-
+           ConCache.update_existing(:rate_limiter, user, fn count ->
+             if count + 1 < 10,
+               do: {:ok, count + 1},
+               else: {:error, String.to_atom("too_many_requests_to_#{role}")}
+           end),
+         do: {:error, String.to_atom("#{role}_does_not_exist")}
   end
 
-  defp check_enough_money_to_transfer(current_amount, desired_amount) do
-    if desired_amount <= current_amount, do: :ok, else: {:error, :not_enough_money}
+  defp decrement_limiter(user) do
+    with {:error, :not_existing} <-
+           ConCache.update_existing(:rate_limiter, user, fn count ->
+             if count - 1 <= 0, do: {:ok, 0}, else: {:ok, count - 1}
+           end),
+         do: {:error, :user_does_not_exist}
+  end
   end
 
   defp normalize_number_input(param) when is_float(param) and param > 0,
