@@ -31,7 +31,7 @@ defmodule ExBanking do
   end
 
   defp normalize_number_input(param) when is_float(param) and param > 0,
-    do: {:ok, Float.floor(param, 2)}
+    do: {:ok, Decimal.from_float(param) |> Decimal.round(2, :down) |> Decimal.to_float()}
 
   defp normalize_number_input(param) when is_integer(param) and param > 0,
     do: {:ok, Decimal.round(param, 2, :down) |> Decimal.to_float()}
