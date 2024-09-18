@@ -1,0 +1,4 @@
+%{
+  "con_cache": {:hex, :con_cache, "1.1.0", "45c7c6cd6dc216e47636232e8c683734b7fe293221fccd9454fa1757bc685044", [:mix], [{:telemetry, "~> 1.0", [hex: :telemetry, repo: "hexpm", optional: false]}], "hexpm", "8655f2ae13a1e56c8aef304d250814c7ed929c12810f126fc423ecc8e871593b"},
+  "telemetry": {:hex, :telemetry, "1.3.0", "fedebbae410d715cf8e7062c96a1ef32ec22e764197f70cda73d82778d61e7a2", [:rebar3], [], "hexpm", "7015fc8919dbe63764f4b4b87a95b7c0996bd539e0d499be6ec9d7f3875b79e6"},
+}
