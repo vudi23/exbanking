@@ -124,4 +124,49 @@ defmodule ExBankingTest do
       assert get_balance("user", "eur") == {:ok, 0}
     end
   end
+
+  describe "send" do
+    test "can send money with sufficient funds" do
+      create_user("user1")
+      create_user("user2")
+      deposit("user1", 100, "usd")
+      deposit("user2", 100, "usd")
+
+      assert send("user2", "user1", 50, "usd") == {:ok, 50, 150}
+      assert get_balance("user1", "usd") == {:ok, 150}
+      assert get_balance("user2", "usd") == {:ok, 50}
+    end
+
+    test "can't send money with insufficient funds" do
+      create_user("user1")
+      create_user("user2")
+      deposit("user1", 150, "usd")
+      deposit("user2", 50, "usd")
+
+      assert send("user2", "user1", 100, "usd") == {:error, :not_enough_money}
+
+      assert get_balance("user1", "usd") == {:ok, 150}
+      assert get_balance("user2", "usd") == {:ok, 50}
+    end
+
+    test "can't send to user that doesn't exist" do
+      create_user("user")
+      deposit("user", 100, "usd")
+
+      assert send("user", "non_existing_receiver", 50, "usd") ==
+               {:error, :receiver_does_not_exist}
+
+      assert get_balance("user", "usd") == {:ok, 100}
+    end
+
+    test "can't send from user that doesn't exist" do
+      create_user("user")
+      deposit("user", 100, "usd")
+
+      assert send("non_existing_sender", "user", 50, "usd") ==
+               {:error, :sender_does_not_exist}
+
+      assert get_balance("user", "usd") == {:ok, 100}
+    end
+  end
 end
