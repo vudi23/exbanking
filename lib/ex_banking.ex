@@ -11,14 +11,18 @@ defmodule ExBanking do
           | {:error, :wrong_arguments | :user_does_not_exist | :too_many_requests_to_user}
   def deposit(user, amount, currency) do
     with :ok <- valid_string_input(currency),
-         :ok <- valid_number_input(amount),
+         {:ok, amount} <- normalize_number_input(amount),
          :ok <- deposit_money(user, currency, amount),
          do: {:ok, fetch_currency_balance(user, currency)}
   end
 
-  defp valid_number_input(param) do
-    if is_number(param) and param > 0, do: :ok, else: {:error, :wrong_arguments}
-  end
+  defp normalize_number_input(param) when is_float(param) and param > 0,
+    do: {:ok, Float.floor(param, 2)}
+
+  defp normalize_number_input(param) when is_integer(param) and param > 0,
+    do: {:ok, Decimal.round(param, 2, :down) |> Decimal.to_float()}
+
+  defp normalize_number_input(_), do: {:error, :wrong_arguments}
 
   defp valid_string_input(param) do
     if is_binary(param), do: :ok, else: {:error, :wrong_arguments}
